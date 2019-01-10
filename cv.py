@@ -9,7 +9,7 @@ class VisionTargetDetector:
     #initializes the variables used in this class
     def __init__(self):
         #rectSize = 10; # set the rext size
-
+        self.DIST_CONSTANT = 3300 # need to test this
         #For angle
         #calc the constant
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0;
@@ -35,6 +35,11 @@ class VisionTargetDetector:
         _, frame = self.camera.read()
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
         self.ANGLE_CONST = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
+
+    def calcDist(self, length):
+        if(length > 0):
+            return self.DIST_CONSTANT / length
+        return -1
 
     def getClosestRects(r1, r2, r3):
         dist1 = math.hypot(r1[1]-r2[1], r1[2]-r2[2])
@@ -162,11 +167,12 @@ class VisionTargetDetector:
 
 
         angle = self.calcAngleDeg(self.pinX)
-
+        distance = self.calcDist((max_rect[4] + smax_rect[4]) / 2.0)
+        if (oneRect) distance = self.calcDist(max_rect[4])
 
         #displays data on the screen such as the angle
         cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
-
+        cv2.putText(frame, "DIST: " + str(distance), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
         #displays data on the console such as the angle
         #print "Angle: " + str(angle)
         #print "--------------------"
@@ -181,4 +187,4 @@ class VisionTargetDetector:
         cv2.waitKey(3)
 
         #returns and angle we calculated
-        return angle
+        return angle, distance
