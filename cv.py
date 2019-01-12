@@ -19,8 +19,9 @@ class VisionTargetDetector:
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
 
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
-        self.DIST_CONSTANT = 3300 # need to test this
+        self.DIST_CONSTANT = 3300 # dist_constant = focal_length * actual_height_of_reflective_tape
         self.ANGLE_CONST = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
+	#update angle constant with focal length from datasheet of camera
 
     def calcDist(self, length):
         if(length > 0):
@@ -90,7 +91,7 @@ class VisionTargetDetector:
         if(rect1.area > 0):
             cv2.rectangle(frame, (rect1.x, rect1.y), (rect1.x + rect1.width, rect1.y + rect1.height), (0, 255, 0), thickness=3)
             #sets threshold for second rectangle length
-            if(rect2.height > 0.3 * rect1.width and rect2.width > 0):
+            if(rect2.height > 0.3 * rect1.width and rect2.width > 0): #make this if statement cleaner
                 cv2.rectangle(frame, (rect2.x, rect2.y), (rect2.x + rect2.width, rect2.y + rect2.height), (0,255,0), thickness=3)
 
                 #finds the approximate position of the pin and draws a blue circle in that position
@@ -104,7 +105,7 @@ class VisionTargetDetector:
                     self.pinX = rect1.x + 5.125/5*rect1.height
                 else:
                     self.pinX = rect1.x - 3.125/5*rect1.height
-
+		#understand why these specific numbers are used in this algorithm
 
         angle = self.calcAngleDeg(self.pinX)
         distance = self.calcDist((rect1.height + rect2.height) / 2.0)
