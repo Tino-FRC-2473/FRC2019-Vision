@@ -19,9 +19,8 @@ class VisionTargetDetector:
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
 
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
-        self.DIST_CONSTANT = 3300 # dist_constant = focal_length * actual_height_of_reflective_tape
-        self.ANGLE_CONST = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
-	#update angle constant with focal length from datasheet of camera
+        self.DIST_CONSTANT = 0.145 * 5.5 #focal length * height of reflective tape (inches)
+        self.ANGLE_CONST = 0.145 #angle constant is the same as focal length of camera (inches)
 
     def calcDist(self, length):
         if(length > 0):
