@@ -12,6 +12,7 @@ class VisionTargetDetector:
 
         self.angle = -1
 
+        # inside camerasettings.sh dev/video[port_number]
         os.system('sudo sh camerasettings.sh')
         self.camera = cv2.VideoCapture(1)
         _, frame = self.camera.read()
@@ -64,21 +65,71 @@ class VisionTargetDetector:
 
         contours.sort(key=sort_by_area, reverse=True)
         maxContours = []
+        rotatedBoxes = []
 
         for c in contours[:3]:
             x, y, w, h = cv2.boundingRect(c)
             area = cv2.contourArea(c)
             maxContours.append(Rectangle(x, y, w, h, area))
+            if(area > 500):
+                rect = cv2.minAreaRect(c)
+                _,_, rot_angle = rect
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                rotatedBoxes.append(RotatedRectangle(box, area, rot_angle))
+
+        if(len(rotatedBoxes) >=2):
+            rotated_rect1 = rotatedBoxes[0]
+            rotated_rect2 = rotatedBoxes[1]
+            cv2.imshow("Frame", frame)
+            print "printing rect1"
+            print rotated_rect1.area
+            print rotated_rect1.box
+            print rotated_rect1.rot_angle
+
+            print "printing rect2"
+            print rotated_rect2.area
+            print rotated_rect2.box
+            print rotated_rect2.rot_angle
+
+            cv2.drawContours(frame,[rotated_rect1.box],0,(0,0,255),2)
+            cv2.putText(frame, "Rect1: " + str(rotated_rect1.rot_angle) , (rotated_rect1.box[0][0], rotated_rect1.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
+
+            cv2.drawContours(frame,[rotated_rect2.box],0,(0,0,255),2)
+            #angle is not right. idk what it outputs
+            cv2.putText(frame, "Rect2: " + str(rotated_rect2.rot_angle), (rotated_rect2.box[0][0], rotated_rect2.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
+
+
+
+            top_point1 = max(rotated_rect1.box, key=lambda x: x[1])
+            top_point2 = max(rotated_rect2.box, key=lambda x: x[1])
+
+            bottom_point1 = min(rotated_rect1.box, key=lambda x: x[1])
+            bottom_point2 = min(rotated_rect2.box, key=lambda x: x[1])
+
+
+            top_dist = math.hypot(top_point2[0] - top_point1[0], top_point2[1] - top_point1[1])
+            bottom_dist = math.hypot(bottom_point2[0] - bottom_point1[0], bottom_point2[1] - bottom_point1[1])
+            print "top dist: " + str(top_dist)
+            print "bottom dist: " + str(bottom_dist)
+
+
+            #i dont know how the points work
+            cv2.line(frame, (top_point1[0], top_point1[1]), (top_point2[0], top_point2[1]),(255,0,0),5)
+            cv2.line(frame, (bottom_point1[0], bottom_point2[1]), (bottom_point2[0], bottom_point2[1]),(255,0,0),5)
 
         if (len(maxContours) < 2) :
             return -1, -1
+
         rect1 = maxContours[0]
         rect2 = maxContours[1]
         rect3 = None
+
         if len(maxContours) < 3 :
             rect3 = Rectangle(0, 0, 0, 0, 0)
         else :
             rect3 = maxContours[2]
+
         oneRect = False
 
         if rect3.area != 0:
@@ -86,6 +137,7 @@ class VisionTargetDetector:
 
         self.pinX = 0
         self.pinY = 0
+
         #draw rectangles on two biggest green part found, draws green rectangles
         if(rect1.area > 0):
             cv2.rectangle(frame, (rect1.x, rect1.y), (rect1.x + rect1.width, rect1.y + rect1.height), (0, 255, 0), thickness=3)
@@ -130,3 +182,10 @@ class Rectangle:
         self.width = width
         self.height = height
         self.area = area
+
+class RotatedRectangle:
+
+    def __init__(self, box, area, rot_angle):
+        self.box = box
+        self.area = area
+        self.rot_angle = rot_angle
