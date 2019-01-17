@@ -23,12 +23,12 @@ class VisionTargetDetector:
         self.DIST_CONSTANT = 0.145 * 5.5 #focal length * height of reflective tape (inches)
         self.ANGLE_CONST = 0.145 #angle constant is the same as focal length of camera (inches)
 
-    def calcDist(self, length):
+    def calc_dist(self, length):
         if(length > 0):
             return self.DIST_CONSTANT / length
         return -1
 
-    def getClosestRects(self, r1, r2, r3):
+    def get_closest_rects(self, r1, r2, r3):
         dist1 = math.hypot(r1.x-r2.x, r1.y - r2.y)
         dist2 = math.hypot(r1.x-r3.x, r1.y - r3.y)
         dist3 = math.hypot(r2.x-r3.x, r2.y - r3.y)
@@ -38,19 +38,19 @@ class VisionTargetDetector:
         elif maximum == dist2: return r1, r3
         else: return r2, r3
 
-    def calcAngleDeg(self, pinX):
-        return self.calcAngleRad(pinX) * 180.0 / math.pi
+    def calc_ang_deg(self, pinX):
+        return self.calc_ang_rad(pinX) * 180.0 / math.pi
 
-    def calcAngleRad(self, pinX):
+    def calc_ang_rad(self, pinX):
         pinDistToCenter = pinX - self.SCREEN_WIDTH / 2
         return math.atan(pinDistToCenter / self.ANGLE_CONST)
 
-    def calcPinPosition(self, x1, y1, x2, y2, x3, y3, x4, y4):
+    def calc_pin_pos(self, x1, y1, x2, y2, x3, y3, x4, y4):
         x = (x1 + x2 + x3 + x4) / 4.0
         y = (y1 + y2 + y3 + y4) / 4.0
         return (int(x), int(y))
 
-    def runCV(self):
+    def run_cv(self):
         _, frame = self.camera.read()
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -133,7 +133,7 @@ class VisionTargetDetector:
         oneRect = False
 
         if rect3.area != 0:
-            rect1, rect2 = self.getClosestRects(rect1, rect2, rect3)
+            rect1, rect2 = self.get_closest_rects(rect1, rect2, rect3)
 
         self.pinX = 0
         self.pinY = 0
@@ -146,7 +146,7 @@ class VisionTargetDetector:
                 cv2.rectangle(frame, (rect2.x, rect2.y), (rect2.x + rect2.width, rect2.y + rect2.height), (0,255,0), thickness=3)
 
                 #finds the approximate position of the pin and draws a blue circle in that position
-                self.pinX, self.pinY = self.calcPinPosition(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
+                self.pinX, self.pinY = self.calc_pin_pos(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
                 cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
             #one rectangle case, when second rectagle is too small/nonexistent
@@ -158,10 +158,10 @@ class VisionTargetDetector:
                     self.pinX = rect1.x - 3.125/5*rect1.height
 		#understand why these specific numbers are used in this algorithm
 
-        angle = self.calcAngleDeg(self.pinX)
-        distance = self.calcDist((rect1.height + rect2.height) / 2.0)
+        angle = self.calc_ang_deg(self.pinX)
+        distance = self.calc_dist((rect1.height + rect2.height) / 2.0)
         if (oneRect):
-             distance = self.calcDist(rect1.height)
+             distance = self.calc_dist(rect1.height)
 
         cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
         cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 2, 255)

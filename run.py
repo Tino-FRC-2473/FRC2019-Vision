@@ -17,6 +17,6 @@ print 'Connected by', addr
 
 while True:
     time.sleep(0.1)
-    angle, distance = detector.runCV()
+    angle, distance = detector.run_cv()
     print str(angle), str(distance)
     conn.sendall(str(angle)+" "+str(distance)+'\n')
