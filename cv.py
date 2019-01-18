@@ -20,12 +20,11 @@ class VisionTargetDetector:
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
 
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
-        self.DIST_CONSTANT = 0.145 * 5.5 #focal length * height of reflective tape (inches)
-        self.ANGLE_CONST = 0.145 #angle constant is the same as focal length of camera (inches)
+        self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0) #angle constant is the same as focal length of camera (pixels)
 
     def calc_dist(self, length):
         if(length > 0):
-            return self.DIST_CONSTANT / length
+            return (self.FOCAL_LENGTH_PIXELS * 5.5) / length
         return -1
 
     def get_closest_rects(self, r1, r2, r3):
@@ -43,7 +42,7 @@ class VisionTargetDetector:
 
     def calc_ang_rad(self, pinX):
         pinDistToCenter = pinX - self.SCREEN_WIDTH / 2
-        return math.atan(pinDistToCenter / self.ANGLE_CONST)
+        return math.atan(pinDistToCenter / self.FOCAL_LENGTH_PIXELS)
 
     def calc_pin_pos(self, x1, y1, x2, y2, x3, y3, x4, y4):
         x = (x1 + x2 + x3 + x4) / 4.0
@@ -118,7 +117,10 @@ class VisionTargetDetector:
             cv2.line(frame, (top_point1[0], top_point1[1]), (top_point2[0], top_point2[1]),(255,0,0),5)
             cv2.line(frame, (bottom_point1[0], bottom_point2[1]), (bottom_point2[0], bottom_point2[1]),(255,0,0),5)
 
-        if (len(maxContours) < 2) :
+        if (len(maxContours) < 2):
+            cv2.imshow("Contours", mask)
+            cv2.imshow("Frame", frame)
+            cv2.waitKey(3)
             return -1, -1
 
         rect1 = maxContours[0]
