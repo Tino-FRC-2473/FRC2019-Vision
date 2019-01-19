@@ -82,10 +82,10 @@ class VisionTargetDetector:
             rotated_rect2 = rotatedBoxes[1]
 
             cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
-            cv2.putText(frame, "Rect1: " + str(rotated_rect1.rot_angle), (rotated_rect1.box[0][0], rotated_rect1.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
+            # cv2.putText(frame, "Rect1: " + str(rotated_rect1.rot_angle), (rotated_rect1.box[0][0], rotated_rect1.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
 
             cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
-            cv2.putText(frame, "Rect2: " + str(rotated_rect2.rot_angle), (rotated_rect2.box[0][0], rotated_rect2.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
+            # cv2.putText(frame, "Rect2: " + str(rotated_rect2.rot_angle), (rotated_rect2.box[0][0], rotated_rect2.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
 
             top_point1 = max(rotated_rect1.box, key=lambda x: x[1])
             top_point2 = max(rotated_rect2.box, key=lambda x: x[1])
@@ -146,8 +146,8 @@ class VisionTargetDetector:
         if (oneRect):
              distance = self.calc_dist(rect1.height)
 
-        cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
-        cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
+        cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
+        cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
 
         cv2.imshow("Contours", mask)
         cv2.imshow("Frame", frame)
