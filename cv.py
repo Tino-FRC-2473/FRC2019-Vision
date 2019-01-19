@@ -132,13 +132,13 @@ class VisionTargetDetector:
             self.pinX, self.pinY = self.calc_pin_pos(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
             cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
-            # one rectangle case, when second rectagle is too small/nonexistent
+        # one rectangle case, when second rectagle is too small/nonexistent
+        else:
+            oneRect = True
+            if(rect1.x + rect1.width/2.0 > self.SCREEN_WIDTH / 2.0):
+                self.pinX = rect1.x + 5.125/5*rect1.height
             else:
-                oneRect = True
-                if(rect1.x + rect1.width/2.0 > self.SCREEN_WIDTH / 2.0):
-                    self.pinX = rect1.x + 5.125/5*rect1.height
-                else:
-                    self.pinX = rect1.x - 3.125/5*rect1.height
+                self.pinX = rect1.x - 3.125/5*rect1.height
 		#understand why these specific numbers are used in this algorithm
 
         angle = self.calc_ang_deg(self.pinX)
