@@ -12,18 +12,21 @@ class VisionTargetDetector:
 
         self.angle = -1
 
-        # inside camerasettings.sh dev/video[port_number]
         os.system('sudo sh camerasettings.sh')
-        self.camera = cv2.VideoCapture(1)
+        self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
         _, frame = self.camera.read()
 
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
-
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
-        self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0) #angle constant is the same as focal length of camera (pixels)
+
+        # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
+        # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
+        self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
 
     def calc_dist(self, length):
-        if(length > 0):
+        if (length > 0):
+            # calculated with ratios in the pinhole camera model
+            # 5.5 is the length of the reflective tape in inches
             return (self.FOCAL_LENGTH_PIXELS * 5.5) / length
         return -1
 
@@ -59,10 +62,7 @@ class VisionTargetDetector:
         mask = cv2.inRange(hsv, low_green, high_green)
         _, contours,_ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        def sort_by_area(c):
-            return cv2.contourArea(c)
-
-        contours.sort(key=sort_by_area, reverse=True)
+        contours.sort(key=cv2.contourArea, reverse=True)
         maxContours = []
         rotatedBoxes = []
 
@@ -77,28 +77,15 @@ class VisionTargetDetector:
                 box = np.int0(box)
                 rotatedBoxes.append(RotatedRectangle(box, area, rot_angle))
 
-        if(len(rotatedBoxes) >=2):
+        if(len(rotatedBoxes) > 1):
             rotated_rect1 = rotatedBoxes[0]
             rotated_rect2 = rotatedBoxes[1]
-            cv2.imshow("Frame", frame)
-            print "printing rect1"
-            print rotated_rect1.area
-            print rotated_rect1.box
-            print rotated_rect1.rot_angle
 
-            print "printing rect2"
-            print rotated_rect2.area
-            print rotated_rect2.box
-            print rotated_rect2.rot_angle
+            cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
+            cv2.putText(frame, "Rect1: " + str(rotated_rect1.rot_angle), (rotated_rect1.box[0][0], rotated_rect1.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
 
-            cv2.drawContours(frame,[rotated_rect1.box],0,(0,0,255),2)
-            cv2.putText(frame, "Rect1: " + str(rotated_rect1.rot_angle) , (rotated_rect1.box[0][0], rotated_rect1.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
-
-            cv2.drawContours(frame,[rotated_rect2.box],0,(0,0,255),2)
-            #angle is not right. idk what it outputs
+            cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
             cv2.putText(frame, "Rect2: " + str(rotated_rect2.rot_angle), (rotated_rect2.box[0][0], rotated_rect2.box[0][1]), cv2.FONT_HERSHEY_DUPLEX, 2, 255)
-
-
 
             top_point1 = max(rotated_rect1.box, key=lambda x: x[1])
             top_point2 = max(rotated_rect2.box, key=lambda x: x[1])
@@ -106,16 +93,12 @@ class VisionTargetDetector:
             bottom_point1 = min(rotated_rect1.box, key=lambda x: x[1])
             bottom_point2 = min(rotated_rect2.box, key=lambda x: x[1])
 
-
             top_dist = math.hypot(top_point2[0] - top_point1[0], top_point2[1] - top_point1[1])
             bottom_dist = math.hypot(bottom_point2[0] - bottom_point1[0], bottom_point2[1] - bottom_point1[1])
-            print "top dist: " + str(top_dist)
-            print "bottom dist: " + str(bottom_dist)
 
-
-            #i dont know how the points work
-            cv2.line(frame, (top_point1[0], top_point1[1]), (top_point2[0], top_point2[1]),(255,0,0),5)
-            cv2.line(frame, (bottom_point1[0], bottom_point2[1]), (bottom_point2[0], bottom_point2[1]),(255,0,0),5)
+            # draws lines connecting the two top points of the targets and the two bottom points
+            cv2.line(frame, (top_point1[0], top_point1[1]), (top_point2[0], top_point2[1]), (255, 0, 0), 5)
+            cv2.line(frame, (bottom_point1[0], bottom_point2[1]), (bottom_point2[0], bottom_point2[1]), (255, 0, 0), 5)
 
         if (len(maxContours) < 2):
             cv2.imshow("Contours", mask)
@@ -127,9 +110,9 @@ class VisionTargetDetector:
         rect2 = maxContours[1]
         rect3 = None
 
-        if len(maxContours) < 3 :
+        if len(maxContours) < 3:
             rect3 = Rectangle(0, 0, 0, 0, 0)
-        else :
+        else:
             rect3 = maxContours[2]
 
         oneRect = False
@@ -140,18 +123,16 @@ class VisionTargetDetector:
         self.pinX = 0
         self.pinY = 0
 
-        #draw rectangles on two biggest green part found, draws green rectangles
+        # draw rectangles on two biggest green part found, draws green rectangles
         if(rect1.area > 0):
-            cv2.rectangle(frame, (rect1.x, rect1.y), (rect1.x + rect1.width, rect1.y + rect1.height), (0, 255, 0), thickness=3)
-            #sets threshold for second rectangle length
-            if(rect2.height > 0.3 * rect1.width and rect2.width > 0): #make this if statement cleaner
-                cv2.rectangle(frame, (rect2.x, rect2.y), (rect2.x + rect2.width, rect2.y + rect2.height), (0,255,0), thickness=3)
+            # cv2.rectangle(frame, (rect1.x, rect1.y), (rect1.x + rect1.width, rect1.y + rect1.height), (0, 255, 0), thickness=3)
+            # cv2.rectangle(frame, (rect2.x, rect2.y), (rect2.x + rect2.width, rect2.y + rect2.height), (0,255,0), thickness=3)
 
-                #finds the approximate position of the pin and draws a blue circle in that position
-                self.pinX, self.pinY = self.calc_pin_pos(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
-                cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
+            # finds the approximate position of the pin and draws a blue circle in that position
+            self.pinX, self.pinY = self.calc_pin_pos(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
+            cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
-            #one rectangle case, when second rectagle is too small/nonexistent
+            # one rectangle case, when second rectagle is too small/nonexistent
             else:
                 oneRect = True
                 if(rect1.x + rect1.width/2.0 > self.SCREEN_WIDTH / 2.0):
@@ -187,6 +168,7 @@ class Rectangle:
 
 class RotatedRectangle:
 
+    # box is a 2d list of rectangle coordiantes
     def __init__(self, box, area, rot_angle):
         self.box = box
         self.area = area
