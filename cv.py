@@ -18,6 +18,8 @@ class VisionTargetDetector:
 
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
+        # calculate True Height of target with 14.5 degree rotation, 5.5 inch tape length, and 2 inch tape width
+        self.TARGET_HEIGHT = 5.5*math.cos(14.5) + 2*math.sin(14.5)
 
         # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
@@ -27,7 +29,7 @@ class VisionTargetDetector:
         if (length > 0):
             # calculated with ratios in the pinhole camera model
             # 5.5 is the length of the reflective tape in inches
-            return (self.FOCAL_LENGTH_PIXELS * 5.5) / length
+            return (self.FOCAL_LENGTH_PIXELS * self.TARGET_HEIGHT) / length
         return -1
 
     def get_closest_rects(self, r1, r2, r3):
