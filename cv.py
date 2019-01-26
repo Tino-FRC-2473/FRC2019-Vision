@@ -12,14 +12,12 @@ class VisionTargetDetector:
 
         self.angle = -1
 
-        os.system('sudo sh camerasettings.sh')
-        self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
+        #os.system('sudo sh camerasettings.sh')
+        self.camera = cv2.VideoCapture(0) # change dev/video[port_number] in camerasettings.sh
         _, frame = self.camera.read()
 
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
-        # calculate True Height of target with 14.5 degree rotation, 5.5 inch tape length, and 2 inch tape width
-        self.TARGET_HEIGHT = 5.5*math.cos(14.5) + 2*math.sin(14.5)
 
         # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
@@ -29,7 +27,7 @@ class VisionTargetDetector:
         if (length > 0):
             # calculated with ratios in the pinhole camera model
             # 5.5 is the length of the reflective tape in inches
-            return (self.FOCAL_LENGTH_PIXELS * self.TARGET_HEIGHT) / length
+            return (self.FOCAL_LENGTH_PIXELS * 5.5) / length
         return -1
 
     def get_closest_rects(self, r1, r2, r3):
@@ -49,9 +47,9 @@ class VisionTargetDetector:
         pinDistToCenter = pinX - self.SCREEN_WIDTH / 2
         return math.atan(pinDistToCenter / self.FOCAL_LENGTH_PIXELS)
 
-    def calc_pin_pos(self, x1, y1, x2, y2, x3, y3, x4, y4):
-        x = (x1 + x2 + x3 + x4) / 4.0
-        y = (y1 + y2 + y3 + y4) / 4.0
+    def calc_pin_pos(self, rect1_point1, rect1_point2, rect1_point3, rect1_point4, rect2_point1, rect2_point2, rect2_point3, rect2_point4):
+        x = (rect1_point1.x + rect1_point2.x + rect1_point3.x + rect1_point4.x + rect2_point1.x + rect2_point2.x + rect2_point3.x + rect2_point4.x) / 8.0
+        y = (rect1_point1.y + rect1_point2.y + rect1_point3.y + rect1_point4.y + rect2_point1.y + rect2_point2.y + rect2_point3.y + rect2_point4.y) / 8.0
         return (int(x), int(y))
 
     def run_cv(self):
@@ -67,6 +65,8 @@ class VisionTargetDetector:
         contours.sort(key=cv2.contourArea, reverse=True)
         maxContours = []
         rotatedBoxes = []
+        rotated_rect1 = None
+        rotated_rect2 = None
 
         for c in contours[:3]:
             x, y, w, h = cv2.boundingRect(c)
@@ -126,12 +126,13 @@ class VisionTargetDetector:
         self.pinY = 0
 
         # draw rectangles on two biggest green part found, draws green rectangles
-        if(rect1.area > 0):
+        if(rect1.area > 0 and len(rotatedBoxes) > 1):
             # cv2.rectangle(frame, (rect1.x, rect1.y), (rect1.x + rect1.width, rect1.y + rect1.height), (0, 255, 0), thickness=3)
             # cv2.rectangle(frame, (rect2.x, rect2.y), (rect2.x + rect2.width, rect2.y + rect2.height), (0,255,0), thickness=3)
 
             # finds the approximate position of the pin and draws a blue circle in that position
-            self.pinX, self.pinY = self.calc_pin_pos(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
+            #self.pinX, self.pinY = self.calc_pin_pos(rect1.x, rect1.y, rect1.x + rect1.width, rect1.y + rect1.height, rect2.x, rect2.y, rect2.x + rect2.width, rect2.y + rect2.height)
+            self.pinX, self.pinY = self.calc_pin_pos(rotated_rect1.point1, rotated_rect1.point2, rotated_rect1.point3, rotated_rect1.point4, rotated_rect2.point1,rotated_rect2.point2, rotated_rect2.point3, rotated_rect1.point4)
             cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
         # one rectangle case, when second rectagle is too small/nonexistent
@@ -175,3 +176,20 @@ class RotatedRectangle:
         self.box = box
         self.area = area
         self.rot_angle = rot_angle
+
+        points = []
+        for coordinates in box:
+            points.append(Point(coordinates))
+
+        points.sort(key= lambda x: x.y)
+        self.point1 = points[0]
+        self.point2 = points[1]
+        self.point3 = points[2]
+        self.point4 = points[3]
+
+
+class Point:
+
+    def __init__(self, coordinates):
+        self.x = coordinates[0]
+        self.y = coordinates[1]
