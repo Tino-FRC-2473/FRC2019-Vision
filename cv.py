@@ -12,8 +12,8 @@ class VisionTargetDetector:
 
         self.angle = -1
 
-        #os.system('sudo sh camerasettings.sh')
-        self.camera = cv2.VideoCapture(0) # change dev/video[port_number] in camerasettings.sh
+        os.system('sudo sh camerasettings.sh')
+        self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
         _, frame = self.camera.read()
 
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
