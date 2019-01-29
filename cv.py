@@ -98,7 +98,7 @@ class VisionTargetDetector:
             rotated_rect2 = rotated_boxes[1]
             if(len(rotated_boxes) > 2) :
                 rotated_rect3 = rotated_boxes[2]
-                rotated_rect1, rotated_rect2 = get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
+                rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
 
 
             cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
@@ -208,8 +208,8 @@ class RotatedRectangle:
         self.point3 = points[2]
         self.point4 = points[3]
 
-        self.height = abs(point4.y - point1.y)
-        self.width = abs(point3.x - point2.x)
+        self.height = abs(self.point4.y - self.point1.y)
+        self.width = abs(self.point3.x - self.point2.x)
 
 
 class Point:
