@@ -16,6 +16,8 @@ class VisionTargetDetector:
         self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
         _, frame = self.camera.read()
 
+        self.TARGET_HEIGHT = 5.5*math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
+
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
 
@@ -27,7 +29,7 @@ class VisionTargetDetector:
         if (length > 0):
             # calculated with ratios in the pinhole camera model
             # 5.5 is the length of the reflective tape in inches
-            return (self.FOCAL_LENGTH_PIXELS * 5.5) / length
+            return (self.FOCAL_LENGTH_PIXELS * self.TARGET_HEIGHT) / length
         return -1
 
     # def get_closest_rects(self, r1, r2, r3):
