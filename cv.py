@@ -42,20 +42,37 @@ class VisionTargetDetector:
     #     else: return r2, r3
 
     def get_closest_rects(self, rect1, rect2, rect3):
-            r1_top_left = rect1.point4
-            r2_top_left = rect2.point4
-            r3_top_left = rect3.point4
+            rects = [rect1, rect2, rect3]
+            #sorts rectangles from left to rift
+            rects.sort(key = lambda b: b.point4.x)
+
+            r1 = rects[0]
+            r2 = rects[1]
+            r3 = rects[2]
+
+            r1_top = r1.point3
+            r2_top = r2.point3
+
+            r1_bottom = r1.point1
+            r2_bottom = r2.point1
 
 
-            dist1 = math.hypot(r1_top_left.x - r2_top_left.x, r1_top_left.y - r2_top_left.y)
-            dist2 = math.hypot(r1_top_left.x - r3_top_left.x, r1_top_left.y - r3_top_left.y)
-            dist3 = math.hypot(r2_top_left.x - r3_top_left.x, r2_top_left.y - r3_top_left.y)
+            top_distance = math.hypot(r1_top.x - r2_top.x, r1_top.y - r2_top.y)
+            bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
 
-            maximum = max(dist1, dist2, dist3)
+            if(top_distance < bottom_distance):
+                return rect1, rect2
+            else:
+                return rect2, rect3
 
-            if maximum == dist1: return rect1, rect2
-            elif maximum == dist2: return rect1, rect3
-            else: return rect2, rect3
+
+            # dist3 = math.hypot(r2_top_right.x - r3_top_left.x, r2_top_right.y - r3_top_left.y)
+            #
+            # maximum = max(dist1, dist2, dist3)
+            #
+            # if maximum == dist1: return rect1, rect2
+            # elif maximum == dist2: return rect1, rect3
+            # else: return rect2, rect3
 
     def calc_ang_deg(self, pinX):
         return self.calc_ang_rad(pinX) * 180.0 / math.pi
