@@ -74,6 +74,7 @@ class VisionTargetDetector:
             # elif maximum == dist2: return rect1, rect3
             # else: return rect2, rect3
 
+    #pin = Target
     def calc_ang_deg(self, pinX):
         return self.calc_ang_rad(pinX) * 180.0 / math.pi
 
@@ -108,14 +109,15 @@ class VisionTargetDetector:
             _,_, rot_angle = rect
             box = cv2.boxPoints(rect)
             box = np.int0(box)
-            rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
+            if area > 100:
+                rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
 
         if(len(rotated_boxes) > 1):
             rotated_rect1 = rotated_boxes[0]
             rotated_rect2 = rotated_boxes[1]
             if(len(rotated_boxes) > 2) :
                 rotated_rect3 = rotated_boxes[2]
-                rotated_rect1, rotated_rect2 = get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
+                rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
 
 
 
@@ -226,8 +228,8 @@ class RotatedRectangle:
         self.point3 = points[2]
         self.point4 = points[3]
 
-        self.height = abs(point4.y - point1.y)
-        self.width = abs(point3.x - point2.x)
+        self.height = abs(self.point4.y - self.point1.y)
+        self.width = abs(self.point3.x - self.point2.x)
 
 
 class Point:
