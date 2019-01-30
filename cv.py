@@ -104,6 +104,8 @@ class VisionTargetDetector:
         rotated_rect1 = None
         rotated_rect2 = None
         rotated_rect3 = None
+        self.pinX = 0
+        self.pinY = 0
 
         for c in contours[:3]:
             area = cv2.contourArea(c)
@@ -156,8 +158,7 @@ class VisionTargetDetector:
         # if rect3.area != 0:
         #     rect1, rect2 = self.get_closest_rects(rect1, rect2, rect3)
 
-        self.pinX = 0
-        self.pinY = 0
+
 
         # draw rectangles on two biggest green part found, draws green rectangles
         #if(rect1.area > 0 and len(rotated_boxes) > 1):
