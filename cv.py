@@ -1,3 +1,7 @@
+
+##GO TO LINE 198 AND ADD RECT
+##FIX RECT POSITION IN CALC_ANGLE_TO_PARALLEL()
+
 # add imports
 import math
 import cv2
@@ -31,6 +35,14 @@ class VisionTargetDetector:
             # 5.5 is the length of the reflective tape in inches
             return (self.FOCAL_LENGTH_PIXELS * self.TARGET_HEIGHT) / length
         return -1
+
+    def calc_angle_to_parallel(self, distance_to_target, pinX, pinY, rect_point):
+            rect_to_pin_px = math.hypot(rect_point.x - pinX, rect_point.y - pinY) #Should be distance from pin to right rectangle in pixels
+            rect_to_pin_inch = (rect_to_pin_px * distance_to_target) / self.FOCAl_LENGTH_PIXELS
+            return math.acos(rect_to_pin_inch / 4.0)
+
+
+
 
     # def get_closest_rects(self, r1, r2, r3):
     #     dist1 = math.hypot(r1.x-r2.x, r1.y - r2.y)
@@ -186,6 +198,8 @@ class VisionTargetDetector:
 
         angle = self.calc_ang_deg(self.pinX)
         distance = self.calc_dist((rotated_rect1.height + rotated_rect2.height) / 2.0)
+
+        angle_to_parallel = calc_angle_to_parallel(distance, self.pinX, self.pinY, r2_point3)
 
 
         # if (oneRect):
