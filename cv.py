@@ -15,6 +15,7 @@ class VisionTargetDetector:
     def __init__(self):
 
         self.angle = -99
+        self.distance_to_target = -1
 
         os.system('sudo sh camerasettings.sh')
         self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
@@ -28,13 +29,19 @@ class VisionTargetDetector:
         # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
         self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
-
+        self.angle_to_parallel = -99;
+        
     def calc_dist(self, length):
         if (length > 0):
             # calculated with ratios in the pinhole camera model
             # 5.5 is the length of the reflective tape in inches
             return (self.FOCAL_LENGTH_PIXELS * self.TARGET_HEIGHT) / length
         return -1
+
+    def convert_to_inches(self, length_px):
+        print "length px: " + str(length_px)
+        print str(self.FOCAL_LENGTH_PIXELS)
+        return (self.distance_to_target * length_px) / self.FOCAL_LENGTH_PIXELS
 
     def calc_angle_to_parallel(self, distance_to_target, pinX, pinY, rect_point):
             rect_to_pin_px = math.hypot(rect_point.x - pinX, rect_point.y - pinY) #Should be distance from pin to right rectangle in pixels
@@ -156,6 +163,15 @@ class VisionTargetDetector:
 
             self.pinX, self.pinY = self.calc_pin_pos(r1_point1, r1_point2, r1_point3, r1_point4, r2_point1, r2_point2, r2_point3, r2_point4)
 
+            distance = self.calc_dist((rotated_rect1.height + rotated_rect2.height) / 2.0)
+            self.distance_to_target = distance * 1.5
+
+            distance_between_target_center = self.convert_to_inches((r1_point3.x - self.pinX)/2)
+
+            self.angle_to_parallel = self.calc_ang_parallel(0.75 * distance_between_target_center)
+
+
+
             cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
         if (len(rotated_boxes) < 2):
@@ -197,9 +213,7 @@ class VisionTargetDetector:
 		# understand why these specific numbers are used in this algorithm
 
         angle = self.calc_ang_deg(self.pinX)
-        distance = self.calc_dist((rotated_rect1.height + rotated_rect2.height) / 2.0)
 
-        angle_to_parallel = calc_angle_to_parallel(distance, self.pinX, self.pinY, r2_point3)
 
 
         # if (oneRect):
@@ -215,7 +229,7 @@ class VisionTargetDetector:
 
         cv2.waitKey(3)
 
-        return angle, distance
+        return angle, self.distance_to_target, self.angle_to_parallel
 
 # holds rectangle properties
 class Rectangle:
