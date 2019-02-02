@@ -1,7 +1,3 @@
-
-##GO TO LINE 198 AND ADD RECT
-##FIX RECT POSITION IN CALC_ANGLE_TO_PARALLEL()
-
 # add imports
 import math
 import cv2
@@ -17,39 +13,28 @@ class VisionTargetDetector:
         self.angle = -99
         self.distance_to_target = -1
 
-        os.system('sudo sh camerasettings.sh')
-        self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
-        _, frame = self.camera.read()
+        #os.system('sudo sh camerasettings.sh')
+        #self.camera = cv2.VideoCapture(0) # change dev/video[port_number] in camerasettings.sh
+        #_, frame = self.camera.read()
+        frame = cv2.imread('testing-pictures/20degrees_36inches.png')
 
         self.TARGET_HEIGHT = 5.5*math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
 
         self.SCREEN_HEIGHT, self.SCREEN_WIDTH = frame.shape[:2]
+        print "screen width:", self.SCREEN_WIDTH
         self.FIELD_OF_VIEW_RAD = 70.42 * math.pi / 180.0
 
         # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
         self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
         self.angle_to_parallel = -99;
-        
+
     def calc_dist(self, length):
         if (length > 0):
             # calculated with ratios in the pinhole camera model
             # 5.5 is the length of the reflective tape in inches
             return (self.FOCAL_LENGTH_PIXELS * self.TARGET_HEIGHT) / length
         return -1
-
-    def convert_to_inches(self, length_px):
-        print "length px: " + str(length_px)
-        print str(self.FOCAL_LENGTH_PIXELS)
-        return (self.distance_to_target * length_px) / self.FOCAL_LENGTH_PIXELS
-
-    def calc_angle_to_parallel(self, distance_to_target, pinX, pinY, rect_point):
-            rect_to_pin_px = math.hypot(rect_point.x - pinX, rect_point.y - pinY) #Should be distance from pin to right rectangle in pixels
-            rect_to_pin_inch = (rect_to_pin_px * distance_to_target) / self.FOCAl_LENGTH_PIXELS
-            return math.acos(rect_to_pin_inch / 4.0)
-
-
-
 
     # def get_closest_rects(self, r1, r2, r3):
     #     dist1 = math.hypot(r1.x-r2.x, r1.y - r2.y)
@@ -61,6 +46,11 @@ class VisionTargetDetector:
     #     if maximum == dist1: return r1, r2
     #     elif maximum == dist2: return r1, r3
     #     else: return r2, r3
+
+    def convert_to_inches(self, length_px):
+        print "distance to target", self.distance_to_target
+        print "focal length in px", self.FOCAL_LENGTH_PIXELS
+        return (self.distance_to_target * length_px) / self.FOCAL_LENGTH_PIXELS
 
     def get_closest_rects(self, rect1, rect2, rect3):
             rects = [rect1, rect2, rect3]
@@ -108,8 +98,16 @@ class VisionTargetDetector:
         y = (rect1_point1.y + rect1_point2.y + rect1_point3.y + rect1_point4.y + rect2_point1.y + rect2_point2.y + rect2_point3.y + rect2_point4.y) / 8.0
         return (int(x), int(y))
 
+    def calc_ang_parallel(self, dist):
+        print "DTB: " + str(dist)
+        print "dist:", dist
+        angle_to_perp = math.acos(dist/4.0)
+        return 90 - math.degrees(angle_to_perp)
+
+
+
     def run_cv(self):
-        _, frame = self.camera.read()
+        frame = cv2.imread('testing-pictures/0degrees_24inches.png')
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         low_green = np.array([60, 90.0, 50.0])
@@ -125,6 +123,7 @@ class VisionTargetDetector:
         rotated_rect3 = None
         self.pinX = 0
         self.pinY = 0
+        distance_between_targets = 0;
 
         for c in contours[:3]:
             area = cv2.contourArea(c)
@@ -165,10 +164,19 @@ class VisionTargetDetector:
 
             distance = self.calc_dist((rotated_rect1.height + rotated_rect2.height) / 2.0)
             self.distance_to_target = distance * 1.5
+            
+            height_target_px = rotated_rect1.height
 
-            distance_between_target_center = self.convert_to_inches((r1_point3.x - self.pinX)/2)
+            print "target height in pixels", height_target_px
+
+            print "target height in inches", self.convert_to_inches(height_target_px)
+
+            distance_between_target_center = self.convert_to_inches(r1_point3.x - self.pinX)
+            print str(r1_point3.x)+ ", " + str(self.pinX)
 
             self.angle_to_parallel = self.calc_ang_parallel(0.75 * distance_between_target_center)
+
+
 
 
 
@@ -178,7 +186,7 @@ class VisionTargetDetector:
             cv2.imshow("Contours", mask)
             cv2.imshow("Frame", frame)
             cv2.waitKey(3)
-            return -99, -1
+            return -99, -1, -99
 
 
         #oneRect = False
@@ -212,6 +220,8 @@ class VisionTargetDetector:
        #         self.pinX = rect1.x - 3.125/5*rect1.height
 		# understand why these specific numbers are used in this algorithm
 
+
+
         angle = self.calc_ang_deg(self.pinX)
 
 
@@ -222,7 +232,7 @@ class VisionTargetDetector:
         cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
 
         cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
-        cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
+        cv2.putText(frame, "DIST: " + str(self.distance_to_target), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
 
         cv2.imshow("Contours", mask)
         cv2.imshow("Frame", frame)
@@ -254,6 +264,8 @@ class RotatedRectangle:
             points.append(Point(coordinates))
 
         points.sort(key= lambda x: x.y)
+
+        # 1 is the los
         self.point1 = points[0]
         self.point2 = points[1]
         self.point3 = points[2]
