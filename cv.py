@@ -135,7 +135,7 @@ class VisionTargetDetector:
         self.angle_to_target = target
 
         # multiplying 1.5 yields consistently more accurage results
-        distance = 1.5 * self.calc_dist((rotated_rect1.height + rotated_rect2.height) / 2.0)
+        distance = 1.5 * self.calc_dist((rotated_rect1.get_height() + rotated_rect2.height.get_width()) / 2.0)
         self.distance_to_target = distance
 
 
@@ -177,8 +177,11 @@ class RotatedRectangle:
         #highest point
         self.point4 = points[3]
 
-        self.height = abs(self.point4.y - self.point1.y)
-        self.width = abs(self.point3.x - self.point2.x)
+    def get_width(self):
+        return abs(self.point3.x - self.point2.x)
+
+    def get_height(self):
+        return abs(self.point4.y - self.point1.y)
 
 # this class defines a point
 class Point:
