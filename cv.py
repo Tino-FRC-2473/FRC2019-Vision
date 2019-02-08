@@ -13,9 +13,9 @@ class VisionTargetDetector:
         self.angle = -99
         self.distance_to_target = -1
 
-        os.system('sudo sh camerasettings.sh')
-        self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
-        _, frame = self.camera.read()
+
+
+        frame = cv2.imread('../test_pic.png')
 
         # height of a vision target
         self.TARGET_HEIGHT = 5.5 * math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
@@ -82,7 +82,9 @@ class VisionTargetDetector:
         return (int(x), int(y))
 
     def run_cv(self):
-        _, frame = self.camera.read()
+        #_, frame = self.camera.read()
+
+        frame = cv2.imread('../test_pic.png')
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -90,16 +92,13 @@ class VisionTargetDetector:
         high_green = np.array([87, 255, 229.0])
 
         mask = cv2.inRange(hsv, low_green, high_green)
-        _, contours,_ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         #sorts contours by area
         #contours.sort(key = cv2.contourArea, reverse = True)
 
-        def find_x(countour):
-            x, _, _, _ = cv2.boundingRect(countour)
-            return x
 
-        contours.sort(key = lambda countour: find_x(countour))
+        contours.sort(key = lambda countour: cv2.boundingRect(countour)[0])
 
         rotated_boxes = []
         rotated_rect1 = None
@@ -190,6 +189,7 @@ class RotatedRectangle:
 
         #sorts points based on y value
         points.sort(key= lambda x: x.y)
+
         #highest point
         self.point1 = points[0]
         #second highest point
