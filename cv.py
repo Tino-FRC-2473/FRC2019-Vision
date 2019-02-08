@@ -8,14 +8,22 @@ import os
 class VisionTargetDetector:
 
     # initilaze variables
-    def __init__(self):
+    def __init__(self, input, output):
 
         self.angle = -99
         self.distance_to_target = -1
 
+        try:
+            # if input is a camera port
+            self.input = cv2.VideoCapture(int(input))
+            self.set_camera_settings(input)
+        except:
+            # if input is a path
+            self.input = cv2.VideoCapture(input)
 
+        self.input_path = input
 
-        frame = cv2.imread('../test_pic.png')
+        frame = self.get_frame()
 
         # height of a vision target
         self.TARGET_HEIGHT = 5.5 * math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
@@ -27,6 +35,30 @@ class VisionTargetDetector:
         # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
         self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
+
+        # specify video codec
+        fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
+        fps = self.input.get(cv2.CAP_PROP_FPS)
+        self.out = cv2.VideoWriter(output, fourcc, fps, (int(self.input.get(3)), int(self.input.get(4))))
+
+    def set_camera_settings(self, camera_port):
+        camera_path = "/dev/video" + camera_port
+        subprocess.call(["v4l2-ctl", "-d", camera_path, "-c", "exposure_auto=1"])
+        subprocess.call(["v4l2-ctl", "-d", camera_path, "-c", "exposure_absolute=1"])
+
+    def get_frame(self):
+        frame = None
+        try:
+            # if input is an image, use cv2.imread()
+            if imghdr.what(self.input_path) is not None:
+                frame = cv2.imread(self.input_path)
+            # if input is a video, use VideoCapture()
+            else:
+                _, frame = self.input.read()
+        except:
+            # if input is a camera port, use VideoCapture()
+            _, frame = self.input.read()
+        return frame
 
     # calculates distance to target
     def calc_dist(self, length):
@@ -81,10 +113,15 @@ class VisionTargetDetector:
         y = (rect1_point1.y + rect1_point2.y + rect1_point3.y + rect1_point4.y + rect2_point1.y + rect2_point2.y + rect2_point3.y + rect2_point4.y) / 8.0
         return (int(x), int(y))
 
+    def release_cv_objects(self):
+        self.out.release()
+        self.input.release()
+        cv2.destroyAllWindows()
+        
     def run_cv(self):
-        #_, frame = self.camera.read()
 
-        frame = cv2.imread('../test_pic.png')
+        frame = self.get_frame()
+        self.out.write(frame)
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
