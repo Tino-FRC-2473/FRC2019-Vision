@@ -10,12 +10,13 @@ class VisionTargetDetector:
     # initilaze variables
     def __init__(self):
 
-        self.angle_to_target = -99
+        self.angle = -99
         self.distance_to_target = -1
 
         os.system('sudo sh camerasettings.sh')
         self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
         _, frame = self.camera.read()
+
 
         # height of a vision target
         self.TARGET_HEIGHT = 5.5 * math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
@@ -38,30 +39,57 @@ class VisionTargetDetector:
 
 
     # given three rectangles, returns the two rectangles that should be facing eachother
-    def get_closest_rects(self, rect1, rect2, rect3):
-            rects = [rect1, rect2, rect3]
-            # sorts rectangles from left to rift
-            rects.sort(key = lambda b: b.point4.x)
+    # def get_closest_rects(self, rect1, rect2, rect3):
+    #         rects = [rect1, rect2, rect3]
+    #         # sorts rectangles from left to rift
+    #         rects.sort(key = lambda b: b.point4.x)
+    #
+    #         r1 = rects[0]
+    #         r2 = rects[1]
+    #         r3 = rects[2]
+    #
+    #         r1_top = r1.point3
+    #         r2_top = r2.point3
+    #
+    #         r1_bottom = r1.point1
+    #         r2_bottom = r2.point1
+    #
+    #
+    #         top_distance = math.hypot(r1_top.x - r2_top.x, r1_top.y - r2_top.y)
+    #         bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
+    #
+    #         if(top_distance < bottom_distance):
+    #             return rect1, rect2
+    #         else:
+    #             return rect2, rect3
 
-            r1 = rects[0]
-            r2 = rects[1]
-            r3 = rects[2]
+    def get_closest_rects(self, rotated_boxes):
 
-            r1_top = r1.point3
-            r2_top = r2.point3
+        pairs =[]
 
-            r1_bottom = r1.point1
-            r2_bottom = r2.point1
+        counter = 0
+        for rect in rotated_boxes:
+            if(counter + 1 < len(rotated_boxes)):
+                next_rect = rotated_boxes[counter + 1]
+                r1_top = rect.point2
+                r2_top = next_rect.point2
+
+                r1_bottom = rect.point4
+                r2_bottom = next_rect.point4
+
+                top_distance = math.hypot(r1_top.x - r2_top.x, r1_top.y - r2_top.y)
+                bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
+
+                if(top_distance < bottom_distance):
+                    pairs.append(Pair(rect, next_rect))
+
+                counter += 1
 
 
-            top_distance = math.hypot(r1_top.x - r2_top.x, r1_top.y - r2_top.y)
-            bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
 
-            if(top_distance < bottom_distance):
-                return rect1, rect2
-            else:
-                return rect2, rect3
+        target_pair = pairs[len(pairs)/2]
 
+        return target_pair.left_rect, target_pair.right_rect
 
     # pin = Target
     def calc_ang_deg(self, pinX):
@@ -79,6 +107,7 @@ class VisionTargetDetector:
 
     def run_cv(self):
         _, frame = self.camera.read()
+        # frame = cv2.imread('../test_pic.png')
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         low_green = np.array([60, 90.0, 50.0])
@@ -88,7 +117,13 @@ class VisionTargetDetector:
         _, contours,_ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         #sorts contours by area
-        contours.sort(key = cv2.contourArea, reverse = True)
+        #contours.sort(key = cv2.contourArea, reverse = True)
+
+        def find_x(countour):
+            x, _, _, _ = cv2.boundingRect(countour)
+            return x
+
+        contours.sort(key = lambda countour: find_x(countour))
 
         rotated_boxes = []
         rotated_rect1 = None
@@ -97,7 +132,7 @@ class VisionTargetDetector:
         self.pinX = 0
         self.pinY = 0
 
-        for c in contours[:3]:
+        for c in contours:
             area = cv2.contourArea(c)
             rect = cv2.minAreaRect(c)
             _,_, rot_angle = rect
@@ -107,12 +142,13 @@ class VisionTargetDetector:
                 rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
 
         if(len(rotated_boxes) > 1):
-            rotated_rect1 = rotated_boxes[0]
-            rotated_rect2 = rotated_boxes[1]
-            if(len(rotated_boxes) > 2) :
-                rotated_rect3 = rotated_boxes[2]
-                rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
+            # rotated_rect1 = rotated_boxes[0]
+            # rotated_rect2 = rotated_boxes[1]
+            # if(len(rotated_boxes) > 2) :
+            #     rotated_rect3 = rotated_boxes[2]
+            #     rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
 
+            rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_boxes)
 
             r1_point1, r1_point2, r1_point3, r1_point4 = rotated_rect1.point1, rotated_rect1.point2, rotated_rect1.point3, rotated_rect1.point4
             r2_point1, r2_point2, r2_point3, r2_point4 = rotated_rect2.point1, rotated_rect2.point2, rotated_rect2.point3, rotated_rect2.point4
@@ -123,6 +159,15 @@ class VisionTargetDetector:
             cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
         # if there are less than two rectangles, return -99, -1
+
+        if(len(rotated_boxes)  == 1):
+            rotated_rect1 = rotated_boxes[0]
+            angle_to_rect = self.calc_ang_deg(rotated_rect1.point1.x)
+            distance_to_target = 1.5 * self.calc_dist(rotated_rect1.get_height())
+            return angle_to_rect, distance_to_target
+
+
+
         if (len(rotated_boxes) < 2):
             cv2.imshow("Contours", mask)
             cv2.imshow("Frame", frame)
@@ -132,10 +177,10 @@ class VisionTargetDetector:
 
 
         angle = self.calc_ang_deg(self.pinX)
-        self.angle_to_target = target
+        self.angle_to_target = angle
 
         # multiplying 1.5 yields consistently more accurage results
-        distance = 1.5 * self.calc_dist((rotated_rect1.get_height() + rotated_rect2.height.get_width()) / 2.0)
+        distance = 1.5 * self.calc_dist((rotated_rect1.get_height() + rotated_rect2.get_height()) / 2.0)
         self.distance_to_target = distance
 
 
@@ -189,3 +234,8 @@ class Point:
     def __init__(self, coordinates):
         self.x = coordinates[0]
         self.y = coordinates[1]
+
+class Pair:
+    def __init__(self, left_rect, right_rect):
+        self.left_rect = left_rect
+        self.right_rect= right_rect
