@@ -85,11 +85,10 @@ class VisionTargetDetector:
 
                 counter += 1
 
-
-
-        target_pair = pairs[len(pairs)/2]
-
-        return target_pair.left_rect, target_pair.right_rect
+        if len(pairs) > 0:
+            target_pair = pairs[len(pairs)/2]
+            return target_pair.left_rect, target_pair.right_rect
+        return rotated_boxes[0], rotated_boxes[1] 
 
     # pin = Target
     def calc_ang_deg(self, pinX):
