@@ -17,7 +17,6 @@ class VisionTargetDetector:
         self.camera = cv2.VideoCapture(1) # change dev/video[port_number] in camerasettings.sh
         _, frame = self.camera.read()
 
-
         # height of a vision target
         self.TARGET_HEIGHT = 5.5 * math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
         # intialize screen width and screen height
@@ -37,32 +36,7 @@ class VisionTargetDetector:
 
         return -1
 
-
-    # given three rectangles, returns the two rectangles that should be facing eachother
-    # def get_closest_rects(self, rect1, rect2, rect3):
-    #         rects = [rect1, rect2, rect3]
-    #         # sorts rectangles from left to rift
-    #         rects.sort(key = lambda b: b.point4.x)
-    #
-    #         r1 = rects[0]
-    #         r2 = rects[1]
-    #         r3 = rects[2]
-    #
-    #         r1_top = r1.point3
-    #         r2_top = r2.point3
-    #
-    #         r1_bottom = r1.point1
-    #         r2_bottom = r2.point1
-    #
-    #
-    #         top_distance = math.hypot(r1_top.x - r2_top.x, r1_top.y - r2_top.y)
-    #         bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
-    #
-    #         if(top_distance < bottom_distance):
-    #             return rect1, rect2
-    #         else:
-    #             return rect2, rect3
-
+    # returns the two closest pair of vision targets
     def get_closest_rects(self, rotated_boxes):
 
         pairs =[]
@@ -71,6 +45,7 @@ class VisionTargetDetector:
         for rect in rotated_boxes:
             if(counter + 1 < len(rotated_boxes)):
                 next_rect = rotated_boxes[counter + 1]
+
                 r1_top = rect.point2
                 r2_top = next_rect.point2
 
@@ -88,7 +63,9 @@ class VisionTargetDetector:
         if len(pairs) > 0:
             target_pair = pairs[len(pairs)/2]
             return target_pair.left_rect, target_pair.right_rect
-        return rotated_boxes[0], rotated_boxes[1] 
+
+
+        return rotated_boxes[0], rotated_boxes[1]
 
     # pin = Target
     def calc_ang_deg(self, pinX):
@@ -106,7 +83,7 @@ class VisionTargetDetector:
 
     def run_cv(self):
         _, frame = self.camera.read()
-        # frame = cv2.imread('../test_pic.png')
+
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         low_green = np.array([60, 90.0, 50.0])
@@ -141,11 +118,6 @@ class VisionTargetDetector:
                 rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
 
         if(len(rotated_boxes) > 1):
-            # rotated_rect1 = rotated_boxes[0]
-            # rotated_rect2 = rotated_boxes[1]
-            # if(len(rotated_boxes) > 2) :
-            #     rotated_rect3 = rotated_boxes[2]
-            #     rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_rect1, rotated_rect2, rotated_rect3)
 
             rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_boxes)
 
@@ -157,16 +129,22 @@ class VisionTargetDetector:
             # draws center circle
             cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
-        # if there are less than two rectangles, return -99, -1
-
+        # if it detects one rectangle, draw center of rectangle
         if(len(rotated_boxes)  == 1):
             rotated_rect1 = rotated_boxes[0]
             angle_to_rect = self.calc_ang_deg(rotated_rect1.point1.x)
+            rect_x, rect_y = (rotated_rect1.point1.x + rotated_rect1.point4.x)/2 , (rotated_rect1.point1.y + rotated_rect1.point4.y)/2
+            cv2.circle(frame, (rect_x, rect_y), 1, (255, 0, 0), thickness=5)
             distance_to_target = 1.5 * self.calc_dist(rotated_rect1.get_height())
+
+            cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
+            cv2.imshow("Contours", mask)
+            cv2.imshow("Frame", frame)
+            cv2.waitKey(3)
             return angle_to_rect, distance_to_target
 
 
-
+        # if there are less than two rectangles, return -99, -1
         if (len(rotated_boxes) < 2):
             cv2.imshow("Contours", mask)
             cv2.imshow("Frame", frame)
@@ -212,13 +190,13 @@ class RotatedRectangle:
 
         #sorts points based on y value
         points.sort(key= lambda x: x.y)
-        #lowest point
-        self.point1 = points[0]
-        #second lowest point
-        self.point2 = points[1]
-        #third lowest point
-        self.point3 = points[2]
         #highest point
+        self.point1 = points[0]
+        #second highest point
+        self.point2 = points[1]
+        #third highest point
+        self.point3 = points[2]
+        #lowest point
         self.point4 = points[3]
 
     def get_width(self):
@@ -234,6 +212,7 @@ class Point:
         self.x = coordinates[0]
         self.y = coordinates[1]
 
+# this class defines a pair of vision targets
 class Pair:
     def __init__(self, left_rect, right_rect):
         self.left_rect = left_rect
