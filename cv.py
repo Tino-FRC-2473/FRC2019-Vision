@@ -2,6 +2,8 @@
 import math
 import cv2
 import numpy as np
+import subprocess
+import imghdr
 import os
 
 # finds angle between robot's heading and the perpendicular to the targets
@@ -117,7 +119,7 @@ class VisionTargetDetector:
         self.out.release()
         self.input.release()
         cv2.destroyAllWindows()
-        
+
     def run_cv(self):
 
         frame = self.get_frame()
