@@ -94,9 +94,17 @@ class VisionTargetDetector:
 
                 counter += 1
 
+
         if len(pairs) > 0:
-            target_pair = pairs[len(pairs)/2]
-            return target_pair.left_rect, target_pair.right_rect
+            closest_pair = pairs[len(pairs)/2]
+
+            for pair in pairs:
+                if abs(self.SCREEN_WIDTH/2 - pair.get_center()[0]) < abs(self.SCREEN_WIDTH/2 - closest_pair.get_center()[0]):
+                    closest_pair = pair
+
+
+
+            return closest_pair.left_rect, closest_pair.right_rect
 
 
         return rotated_boxes[0], rotated_boxes[1]
@@ -147,6 +155,11 @@ class VisionTargetDetector:
         self.pinY = 0
 
         for c in contours:
+
+            #ignore anything below hatch panel level
+            if cv2.boundingRect(c)[3] > 330:
+                continue
+
             area = cv2.contourArea(c)
             rect = cv2.minAreaRect(c)
             _,_, rot_angle = rect
@@ -229,6 +242,7 @@ class RotatedRectangle:
         #sorts points based on y value
         points.sort(key= lambda x: x.y)
 
+        self.points = points
         #highest point
         self.point1 = points[0]
         #second highest point
@@ -256,3 +270,10 @@ class Pair:
     def __init__(self, left_rect, right_rect):
         self.left_rect = left_rect
         self.right_rect= right_rect
+
+    def get_center(self):
+        r1 = self.left_rect
+        r2 = self.right_rect
+        x = (r1.points[0].x + r1.points[1].x + r1.points[2].x + r1.points[3].x + r2.points[0].x + r2.points[1].x + r2.points[2].x + r2.points[3].x) / 8.0
+        y = (r1.points[0].y + r1.points[1].y + r1.points[2].y + r1.points[3].y + r2.points[0].y + r2.points[1].y + r2.points[2].y + r2.points[3].y) / 8.0
+        return int(x), int(y)
