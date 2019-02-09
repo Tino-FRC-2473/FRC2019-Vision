@@ -157,16 +157,15 @@ class VisionTargetDetector:
         for c in contours:
 
             #ignore anything below hatch panel level
-            if cv2.boundingRect(c)[3] > 330:
-                continue
-
-            area = cv2.contourArea(c)
-            rect = cv2.minAreaRect(c)
-            _,_, rot_angle = rect
-            box = cv2.boxPoints(rect)
-            box = np.int0(box)
-            if area > 100:
-                rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
+            centery = cv2.boundingRect(c)[1] + cv2.boundingRect(c)[3]/2
+            if centery < 320:
+                area = cv2.contourArea(c)
+                rect = cv2.minAreaRect(c)
+                _,_, rot_angle = rect
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                if area > 100:
+                    rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
 
         if(len(rotated_boxes) > 1):
 
