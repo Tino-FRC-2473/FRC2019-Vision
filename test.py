@@ -31,12 +31,9 @@ if args.out:
 
 detector = VisionTargetDetector(args.input, output)
 
-try:
+with detector as d:
     while True:
-        angle, distance = detector.run_cv()
-
-except KeyboardInterrupt:
-    pass
+        angle, distance = d.run_cv()
 
 # close input and writer
 detector.release_cv_objects()
