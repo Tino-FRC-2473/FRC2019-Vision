@@ -43,6 +43,9 @@ class VisionTargetDetector:
         fps = self.input.get(cv2.CAP_PROP_FPS)
         self.out = cv2.VideoWriter(output, fourcc, fps, (int(self.input.get(3)), int(self.input.get(4))))
 
+    def __del__(self):
+        self.release_cv_objects()
+        
     def set_camera_settings(self, camera_port):
         camera_path = "/dev/video" + camera_port
         subprocess.call(["v4l2-ctl", "-d", camera_path, "-c", "exposure_auto=1"])
