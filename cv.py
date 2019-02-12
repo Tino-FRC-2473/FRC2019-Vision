@@ -142,8 +142,8 @@ class VisionTargetDetector:
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        low_green = np.array([60, 90.0, 50.0])
-        high_green = np.array([87, 255, 229.0])
+        low_green = np.array([60, 90, 50])
+        high_green = np.array([87, 255, 229])
 
         mask = cv2.inRange(hsv, low_green, high_green)
         _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -151,7 +151,7 @@ class VisionTargetDetector:
         #sorts contours by area
         #contours.sort(key = cv2.contourArea, reverse = True)
 
-
+        cv2.line(frame, (0, 400), (self.SCREEN_WIDTH, 400), (255,0,0), 3)
         contours.sort(key = lambda countour: cv2.boundingRect(countour)[0])
 
         rotated_boxes = []
@@ -165,7 +165,7 @@ class VisionTargetDetector:
 
             #ignore anything below hatch panel level
             centery = cv2.boundingRect(c)[1] + cv2.boundingRect(c)[3]/2
-            if centery < 320:
+            if centery < 400:
                 area = cv2.contourArea(c)
                 rect = cv2.minAreaRect(c)
                 _,_, rot_angle = rect
