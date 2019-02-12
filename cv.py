@@ -175,11 +175,13 @@ class VisionTargetDetector:
                 box = np.int0(box)
                 if area > 100:
                     rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
-
-        print contour_area/(self.SCREEN_WIDTH * self.SCREEN_HEIGHT)
-
-
-
+        
+        if contour_area/(self.SCREEN_WIDTH * self.SCREEN_HEIGHT) > 0.17:
+            cv2.imshow("Contours", mask)
+            cv2.imshow("Frame", frame)
+            cv2.waitKey(3)
+            return 0, 0
+            
         if(len(rotated_boxes) > 1):
 
             rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_boxes)
