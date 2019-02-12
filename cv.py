@@ -4,13 +4,14 @@ import cv2
 import numpy as np
 import subprocess
 import imghdr
+import traceback
 import os
 
 # finds angle between robot's heading and the perpendicular to the targets
 class VisionTargetDetector:
 
     # initilaze variables
-    def __init__(self, input, output):
+    def __init__(self, input, output=""):
 
         self.angle = -99
         self.distance_to_target = -1
@@ -42,6 +43,12 @@ class VisionTargetDetector:
         fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
         fps = self.input.get(cv2.CAP_PROP_FPS)
         self.out = cv2.VideoWriter(output, fourcc, fps, (int(self.input.get(3)), int(self.input.get(4))))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.release_cv_objects()
 
     def set_camera_settings(self, camera_port):
         camera_path = "/dev/video" + camera_port
@@ -135,8 +142,8 @@ class VisionTargetDetector:
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        low_green = np.array([60, 90.0, 50.0])
-        high_green = np.array([87, 255, 229.0])
+        low_green = np.array([60, 90, 50])
+        high_green = np.array([87, 255, 229])
 
         mask = cv2.inRange(hsv, low_green, high_green)
         _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -144,7 +151,7 @@ class VisionTargetDetector:
         #sorts contours by area
         #contours.sort(key = cv2.contourArea, reverse = True)
 
-
+        cv2.line(frame, (0, 400), (self.SCREEN_WIDTH, 400), (255,0,0), 3)
         contours.sort(key = lambda countour: cv2.boundingRect(countour)[0])
 
         rotated_boxes = []
@@ -160,7 +167,7 @@ class VisionTargetDetector:
             contour_area += cv2.contourArea(c)
             #ignore anything below hatch panel level
             centery = cv2.boundingRect(c)[1] + cv2.boundingRect(c)[3]/2
-            if centery < 320:
+            if centery < 400:
                 area = cv2.contourArea(c)
                 rect = cv2.minAreaRect(c)
                 _,_, rot_angle = rect
