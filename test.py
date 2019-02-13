@@ -21,7 +21,7 @@ output = ""
 print "Reading from", args.input
 
 if args.out:
-    output = "videos/" + datetime.now().strftime('%Y-%m-%d-%H:%M:%S') + ".avi"
+    output = "videos/" + datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + ".avi"
     print "Writing to", output
     # if videos folder doesn't exist, create it
     if not os.path.isdir("videos"):
@@ -33,7 +33,8 @@ detector = VisionTargetDetector(args.input, output)
 
 with detector as d:
     while True:
-        angle, distance = d.run_cv()
+        # angle, distance = d.run_cv()
+        print d.run_cv()
 
 # close input and writer
 detector.release_cv_objects()
