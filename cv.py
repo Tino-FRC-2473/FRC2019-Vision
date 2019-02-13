@@ -161,10 +161,7 @@ class VisionTargetDetector:
         self.pinX = 0
         self.pinY = 0
 
-        contour_area = 0
-
         for c in contours:
-            contour_area += cv2.contourArea(c)
             #ignore anything below hatch panel level
             centery = cv2.boundingRect(c)[1] + cv2.boundingRect(c)[3]/2
             if centery < 320:
@@ -175,12 +172,6 @@ class VisionTargetDetector:
                 box = np.int0(box)
                 if area > 100:
                     rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
-        
-        if contour_area/(self.SCREEN_WIDTH * self.SCREEN_HEIGHT) > 0.17:
-            cv2.imshow("Contours", mask)
-            cv2.imshow("Frame", frame)
-            cv2.waitKey(3)
-            return 0, 0
             
         if(len(rotated_boxes) > 1):
 
@@ -225,6 +216,12 @@ class VisionTargetDetector:
         distance = 1.5 * self.calc_dist((rotated_rect1.get_height() + rotated_rect2.get_height()) / 2.0)
         self.distance_to_target = distance
 
+
+        if cv2.countNonZero(mask) > 10000:
+            cv2.imshow("Contours", mask)
+            cv2.imshow("Frame", frame)
+            cv2.waitKey(3)
+            return angle, 0
 
         cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
         cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
