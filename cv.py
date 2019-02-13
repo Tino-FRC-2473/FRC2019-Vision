@@ -167,7 +167,7 @@ class VisionTargetDetector:
             contour_area += cv2.contourArea(c)
             #ignore anything below hatch panel level
             centery = cv2.boundingRect(c)[1] + cv2.boundingRect(c)[3]/2
-            if centery < 400:
+            if centery < 320:
                 area = cv2.contourArea(c)
                 rect = cv2.minAreaRect(c)
                 _,_, rot_angle = rect
