@@ -18,6 +18,7 @@ class VisionTargetDetector:
 
         try:
             # if input is a camera port
+            self.port = input
             self.input = cv2.VideoCapture(int(input))
             self.set_camera_settings(input)
         except:
@@ -194,16 +195,16 @@ class VisionTargetDetector:
             distance_to_target = 1.5 * self.calc_dist(rotated_rect1.get_height())
 
             cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
-            cv2.imshow("Contours", mask)
-            cv2.imshow("Frame", frame)
+            cv2.imshow("Contours"+str(self.port), mask)
+            cv2.imshow("Frame"+str(self.port), frame)
             cv2.waitKey(3)
             return angle_to_rect, distance_to_target
 
 
         # if there are less than two rectangles, return -99, -1
         if (len(rotated_boxes) < 2):
-            cv2.imshow("Contours", mask)
-            cv2.imshow("Frame", frame)
+            cv2.imshow("Contours"+str(self.port), mask)
+            cv2.imshow("Frame"+str(self.port), frame)
             cv2.waitKey(3)
             return -99, -1
 
@@ -218,8 +219,8 @@ class VisionTargetDetector:
 
 
         if cv2.countNonZero(mask) > 10000:
-            cv2.imshow("Contours", mask)
-            cv2.imshow("Frame", frame)
+            cv2.imshow("Contours"+str(self.port), mask)
+            cv2.imshow("Frame"+str(self.port), frame)
             cv2.waitKey(3)
             return angle, 0
 
@@ -229,8 +230,8 @@ class VisionTargetDetector:
         cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
         cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
 
-        cv2.imshow("Contours", mask)
-        cv2.imshow("Frame", frame)
+        cv2.imshow("Contours"+str(self.port), mask)
+        cv2.imshow("Frame"+str(self.port), frame)
 
         cv2.waitKey(3)
 
