@@ -53,7 +53,7 @@ class VisionTargetDetector:
     def set_camera_settings(self, camera_port):
         camera_path = "/dev/video" + camera_port
         subprocess.call(["v4l2-ctl", "-d", camera_path, "-c", "exposure_auto=1"])
-        subprocess.call(["v4l2-ctl", "-d", camera_path, "-c", "exposure_absolute=1"])
+        subprocess.call(["v4l2-ctl", "-d", camera_path, "-c", "exposure_absolute=15"])
 
     def get_frame(self):
         frame = None
@@ -170,7 +170,7 @@ class VisionTargetDetector:
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        low_green = np.array([60, 90, 50])
+        low_green = np.array([60, 90, 25])
         high_green = np.array([87, 255, 229])
 
         mask = cv2.inRange(hsv, low_green, high_green)
@@ -251,6 +251,8 @@ class VisionTargetDetector:
         for pair in self.pairs:
             cv2.drawContours(frame, [pair.left_rect.box], 0, (0, 0, 255), 2)
             cv2.drawContours(frame, [pair.right_rect.box], 0, (0, 0, 255), 2)
+            pair_x, pair_y = pair.get_center()
+            cv2.circle(frame, (pair_x, pair_y), 1, (255, 0, 0), thickness=5)
 
         # cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
         # cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
