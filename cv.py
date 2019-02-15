@@ -11,7 +11,7 @@ import os
 class VisionTargetDetector:
 
     # initilaze variables
-    def __init__(self, input, output=""):
+    def __init__(self, input):
 
         self.angle = -99
         self.distance_to_target = -1
@@ -38,11 +38,6 @@ class VisionTargetDetector:
         # calculates focal length based on a right triangle representing the "image" side of a pinhole camera
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
         self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
-
-        # specify video codec
-        fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-        fps = self.input.get(cv2.CAP_PROP_FPS)
-        self.out = cv2.VideoWriter(output, fourcc, fps, (int(self.input.get(3)), int(self.input.get(4))))
 
     def __enter__(self):
         return self
@@ -159,14 +154,12 @@ class VisionTargetDetector:
         return (int(x), int(y))
 
     def release_cv_objects(self):
-        self.out.release()
         self.input.release()
         cv2.destroyAllWindows()
 
     def run_cv(self):
 
         frame = self.get_frame()
-        self.out.write(frame)
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
