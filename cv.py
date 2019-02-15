@@ -139,6 +139,9 @@ class VisionTargetDetector:
 
                 counter += 1
 
+        if (len(pairs) > 3):
+            return pairs[:3]
+
         return pairs
 
     # pin = Target
@@ -297,7 +300,8 @@ class RotatedRectangle:
     def get_center(self):
         x = sum(point.x for point in self.points) / 4
         y = sum(point.x for point in self.points) / 4
-        return Point(self, [x, y])
+        coordinates =  [x, y]
+        return Point(coordinates)
 
 # this class defines a point
 class Point:
