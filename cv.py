@@ -168,12 +168,12 @@ class VisionTargetDetector:
         frame = self.get_frame()
         self.out.write(frame)
 
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        yuv = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
 
-        low_green = np.array([60, 90, 25])
-        high_green = np.array([87, 255, 229])
+        low_green = np.array([0, -0.5, -0.5])
+        high_green = np.array([1, 0, 0])
 
-        mask = cv2.inRange(hsv, low_green, high_green)
+        mask = cv2.inRange(yuv, low_green, high_green)
         _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         #sorts contours by area
