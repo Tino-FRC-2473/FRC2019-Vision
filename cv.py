@@ -170,12 +170,10 @@ class VisionTargetDetector:
 
         yuv = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
 
-        low_green = np.array([0, 0, 0])
-        high_green = np.array([255, 160, 100])
-        y, u, v = cv2.split(yuv)
+        low_green = np.array([70, 112, 50])
+        high_green = np.array([200, 150, 90])
+        #y, u, v = cv2.split(yuv)
         
-        y_avg = np.average(yuv[:,:,0])
-        print y_avg
         mask = cv2.inRange(yuv, low_green, high_green)
         _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
