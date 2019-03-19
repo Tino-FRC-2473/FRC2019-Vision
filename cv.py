@@ -4,14 +4,15 @@ import cv2
 import numpy as np
 import subprocess
 import imghdr
+import traceback
 import os
 
 # finds angle between robot's heading and the perpendicular to the targets
 class VisionTargetDetector:
 
     # initilaze variables
-    def __init__(self, input, output):
-
+    def __init__(self, input):
+	self.port = input
         self.angle = -99
         self.distance_to_target = -1
 
@@ -38,10 +39,11 @@ class VisionTargetDetector:
         # ABC where A is FIELD_OF_VIEW_RAD/2, a is SCREEN_WIDTH/2, and b is the focal length
         self.FOCAL_LENGTH_PIXELS = (self.SCREEN_WIDTH / 2.0) / math.tan(self.FIELD_OF_VIEW_RAD / 2.0)
 
-        # specify video codec
-        fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-        fps = self.input.get(cv2.CAP_PROP_FPS)
-        self.out = cv2.VideoWriter(output, fourcc, fps, (int(self.input.get(3)), int(self.input.get(4))))
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.release_cv_objects()
 
     def set_camera_settings(self, camera_port):
         camera_path = "/dev/video" + camera_port
@@ -90,16 +92,52 @@ class VisionTargetDetector:
                 bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
 
                 if(top_distance < bottom_distance):
-                    pairs.append(Pair(rect, next_rect))
+                    pairs.append(Pair(rect, next_rect, self))
 
                 counter += 1
 
+
         if len(pairs) > 0:
-            target_pair = pairs[len(pairs)/2]
-            return target_pair.left_rect, target_pair.right_rect
+            closest_pair = pairs[len(pairs)/2]
+
+            for pair in self.pairs:
+                if abs(self.SCREEN_WIDTH/2 - pair.get_center()[0]) < abs(self.SCREEN_WIDTH/2 - closest_pair.get_center()[0]):
+                    closest_pair = pair
+
+
+
+            return closest_pair.left_rect, closest_pair.right_rect
 
 
         return rotated_boxes[0], rotated_boxes[1]
+
+    def get_all_pairs(self, rotated_boxes):
+
+        pairs =[]
+
+        counter = 0
+        for rect in rotated_boxes:
+            if(counter + 1 < len(rotated_boxes)):
+                next_rect = rotated_boxes[counter + 1]
+
+                r1_top = rect.point2
+                r2_top = next_rect.point2
+
+                r1_bottom = rect.point4
+                r2_bottom = next_rect.point4
+
+                top_distance = math.hypot(r1_top.x - r2_top.x, r1_top.y - r2_top.y)
+                bottom_distance = math.hypot(r1_bottom.x - r2_bottom.x, r1_bottom.y - r2_bottom.y)
+
+                if(top_distance < bottom_distance):
+                    pairs.append(Pair(rect, next_rect, self))
+
+                counter += 1
+
+        if (len(pairs) > 3):
+            return pairs[:3]
+
+        return pairs
 
     # pin = Target
     def calc_ang_deg(self, pinX):
@@ -116,27 +154,28 @@ class VisionTargetDetector:
         return (int(x), int(y))
 
     def release_cv_objects(self):
-        self.out.release()
         self.input.release()
         cv2.destroyAllWindows()
 
     def run_cv(self):
 
         frame = self.get_frame()
-        self.out.write(frame)
 
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        '''yuv = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
 
-        low_green = np.array([60, 90.0, 50.0])
-        high_green = np.array([87, 255, 229.0])
+        low_green = np.array([70, 112, 50])
+        high_green = np.array([200, 150, 90])'''
+	hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+	low_green = np.array([60,90,50])
+	high_green= np.array([87,255,229])
 
         mask = cv2.inRange(hsv, low_green, high_green)
         _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+	px = cv2.countNonZero(mask)
         #sorts contours by area
         #contours.sort(key = cv2.contourArea, reverse = True)
 
-
+        cv2.line(frame, (0, 400), (self.SCREEN_WIDTH, 400), (255,0,0), 3)
         contours.sort(key = lambda countour: cv2.boundingRect(countour)[0])
 
         rotated_boxes = []
@@ -146,77 +185,87 @@ class VisionTargetDetector:
         self.pinX = 0
         self.pinY = 0
 
+        total_contour_area = 0
+
         for c in contours:
-            area = cv2.contourArea(c)
-            rect = cv2.minAreaRect(c)
-            _,_, rot_angle = rect
-            box = cv2.boxPoints(rect)
-            box = np.int0(box)
-            if area > 100:
-                rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
+            #ignore anything below hatch panel level
+            centery = cv2.boundingRect(c)[1] + cv2.boundingRect(c)[3]/2
+            if centery < 400:
+                area = cv2.contourArea(c)
+                rect = cv2.minAreaRect(c)
+                _, _, rot_angle = rect
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                if area > 100:
+                    rotated_boxes.append(RotatedRectangle(box, area, rot_angle))
 
-        if(len(rotated_boxes) > 1):
-
-            rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_boxes)
-
-            r1_point1, r1_point2, r1_point3, r1_point4 = rotated_rect1.point1, rotated_rect1.point2, rotated_rect1.point3, rotated_rect1.point4
-            r2_point1, r2_point2, r2_point3, r2_point4 = rotated_rect2.point1, rotated_rect2.point2, rotated_rect2.point3, rotated_rect2.point4
-
-            self.pinX, self.pinY = self.calc_pin_pos(r1_point1, r1_point2, r1_point3, r1_point4, r2_point1, r2_point2, r2_point3, r2_point4)
-
-            # draws center circle
-            cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
+            total_contour_area += cv2.contourArea(c)
 
         # if it detects one rectangle, draw center of rectangle
         if(len(rotated_boxes)  == 1):
-            rotated_rect1 = rotated_boxes[0]
-            angle_to_rect = self.calc_ang_deg(rotated_rect1.point1.x)
-            rect_x, rect_y = (rotated_rect1.point1.x + rotated_rect1.point4.x)/2 , (rotated_rect1.point1.y + rotated_rect1.point4.y)/2
+            rotated_rect = rotated_boxes[0]
+            angle_to_rect = self.calc_ang_deg(rotated_rect.get_center().x)
+            rect_x = rotated_rect.get_center().x
+            rect_y = rotated_rect.get_center().y
             cv2.circle(frame, (rect_x, rect_y), 1, (255, 0, 0), thickness=5)
-            distance_to_target = 1.5 * self.calc_dist(rotated_rect1.get_height())
+            distance_to_target = 1.5 * self.calc_dist(rotated_rect.get_height())
 
-            cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
-            cv2.imshow("Contours", mask)
-            cv2.imshow("Frame", frame)
+            cv2.drawContours(frame, [rotated_rect.box], 0, (0, 0, 255), 2)
+            cv2.imshow("Contours"+str(self.port), mask)
+            cv2.imshow("Frame"+str(self.port), frame)
             cv2.waitKey(3)
-            return angle_to_rect, distance_to_target
-
+            return [(angle_to_rect, distance_to_target, rect_x)]
 
         # if there are less than two rectangles, return -99, -1
         if (len(rotated_boxes) < 2):
-            cv2.imshow("Contours", mask)
-            cv2.imshow("Frame", frame)
+            cv2.imshow("Contours"+str(self.port), mask)
+            cv2.imshow("Frame"+str(self.port), frame)
             cv2.waitKey(3)
-            return -99, -1
+            return []
+            #return -99, -1
 
+        if(len(rotated_boxes) > 1):
 
+            self.pairs = self.get_all_pairs(rotated_boxes)
+            # rotated_rect1, rotated_rect2 = self.get_closest_rects(rotated_boxes)
+            #
+            # r1_point1, r1_point2, r1_point3, r1_point4 = rotated_rect1.point1, rotated_rect1.point2, rotated_rect1.point3, rotated_rect1.point4
+            # r2_point1, r2_point2, r2_point3, r2_point4 = rotated_rect2.point1, rotated_rect2.point2, rotated_rect2.point3, rotated_rect2.point4
+            #
+            # self.pinX, self.pinY = self.calc_pin_pos(r1_point1, r1_point2, r1_point3, r1_point4, r2_point1, r2_point2, r2_point3, r2_point4)
+            #
+            # # draws center circle
+            # cv2.circle(frame, (self.pinX, self.pinY), 1, (255, 0, 0), thickness=5)
 
-        angle = self.calc_ang_deg(self.pinX)
-        self.angle_to_target = angle
+        # angle = self.calc_ang_deg(self.pinX)
+        # self.angle_to_target = angle
 
         # multiplying 1.5 yields consistently more accurage results
-        distance = 1.5 * self.calc_dist((rotated_rect1.get_height() + rotated_rect2.get_height()) / 2.0)
-        self.distance_to_target = distance
+        # distance = 1.5 * self.calc_dist((rotated_rect1.get_height() + rotated_rect2.get_height()) / 2.0)
+        # self.distance_to_target = distance
+	
+	self.pairs = [pair for pair in self.pairs if abs(pair.left_rect.get_center().x-pair.right_rect.get_center().x) > 70]
+        for pair in self.pairs:
+            cv2.drawContours(frame, [pair.left_rect.box], 0, (0, 0, 255), 2)
+            cv2.drawContours(frame, [pair.right_rect.box], 0, (0, 0, 255), 2)
+	    #cv2.line(frame, (pair.get_center()[0], self.SCREEN_HEIGHT), (pair.get_center()[0], 0), (255,0,0), 3)
+        # cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
+        # cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
 
+        # cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
+        # cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
 
-        cv2.drawContours(frame, [rotated_rect1.box], 0, (0, 0, 255), 2)
-        cv2.drawContours(frame, [rotated_rect2.box], 0, (0, 0, 255), 2)
-
-        cv2.putText(frame, "ANG: " + str(angle), (0, 50), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
-        cv2.putText(frame, "DIST: " + str(distance), (0, 120), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255))
-
-        cv2.imshow("Contours", mask)
-        cv2.imshow("Frame", frame)
-
+        pair_details = []
+        for pair in self.pairs:
+            pair_details.append((self.calc_ang_deg(pair.get_center()[0]), pair.get_distance(), pair.get_center()[0]))
+	    cv2.line(frame, (pair.get_center()[0], self.SCREEN_HEIGHT), (pair.get_center()[0], 0), (255,0,0), 3)
+        cv2.imshow("Contours"+str(self.port), mask)
+        cv2.imshow("Frame"+str(self.port), frame)
         cv2.waitKey(3)
+        return pair_details
 
-        return angle, distance
-
-
-# this class defines a rotated rectantle around a countour
 class RotatedRectangle:
 
-    # box is a 2d list of rectangle coordiantes
     def __init__(self, box, area, rot_angle):
         self.box = box
         self.area = area
@@ -229,6 +278,7 @@ class RotatedRectangle:
         #sorts points based on y value
         points.sort(key= lambda x: x.y)
 
+        self.points = points
         #highest point
         self.point1 = points[0]
         #second highest point
@@ -244,6 +294,12 @@ class RotatedRectangle:
     def get_height(self):
         return abs(self.point4.y - self.point1.y)
 
+    def get_center(self):
+        x = sum(point.x for point in self.points) / 4
+        y = sum(point.x for point in self.points) / 4
+        coordinates =  [x, y]
+        return Point(coordinates)
+
 # this class defines a point
 class Point:
 
@@ -253,6 +309,17 @@ class Point:
 
 # this class defines a pair of vision targets
 class Pair:
-    def __init__(self, left_rect, right_rect):
+    def __init__(self, left_rect, right_rect, vtd):
         self.left_rect = left_rect
         self.right_rect= right_rect
+        self.vtd = vtd
+
+    def get_center(self):
+        r1 = self.left_rect
+        r2 = self.right_rect
+        x = (r1.points[0].x + r1.points[1].x + r1.points[2].x + r1.points[3].x + r2.points[0].x + r2.points[1].x + r2.points[2].x + r2.points[3].x) / 8.0
+        y = (r1.points[0].y + r1.points[1].y + r1.points[2].y + r1.points[3].y + r2.points[0].y + r2.points[1].y + r2.points[2].y + r2.points[3].y) / 8.0
+        return int(x), int(y)
+
+    def get_distance(self):
+        return 1.5 * (self.vtd.FOCAL_LENGTH_PIXELS * self.vtd.TARGET_HEIGHT) / ((self.left_rect.get_height() + self.right_rect.get_height()) / 2.0)

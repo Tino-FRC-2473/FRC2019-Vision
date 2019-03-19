@@ -13,33 +13,18 @@ from cv import VisionTargetDetector
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input", help="read from the given camera or video", default="0")
-parser.add_argument("-o", "--out", help="save video output", action="store_true")
 args = parser.parse_args()
-
-output = ""
 
 print "Reading from", args.input
 
-if args.out:
-    output = "videos/" + datetime.now().strftime('%Y-%m-%d-%H:%M:%S') + ".avi"
-    print "Writing to", output
-    # if videos folder doesn't exist, create it
-    if not os.path.isdir("videos"):
-        subprocess.call(["mkdir", "videos"])
-        print "made videos"
+df = VisionTargetDetector("0")
+db = VisionTargetDetector("1")
 
-
-detector = VisionTargetDetector(args.input, output)
-
-try:
-    while True:
-        angle, distance = detector.run_cv()
-
-except KeyboardInterrupt:
-    pass
+#with df, db as d1, d2:
+while True:
+    # angle, distance = d.run_cv()
+    print df.run_cv()
+    print db.run_cv()
 
 # close input and writer
 detector.release_cv_objects()
-
-if args.out:
-    print "Video writing successful"
